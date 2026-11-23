@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d9480f">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="毎日筋トレ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  [hidden] { display: none !important; }
+</style>
+<title>毎日筋トレ</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  /* レイアウト：スマホ1列。上から「連続日数→今日のメニュー→漫画予算→体重」の順に親指で操作できる幅 */
+  :root {
+    --bg: #f5f3ef;
+    --card: #ffffff;
+    --text: #1f1c19;
+    --sub: #6f6862;
+    --line: #e4dfd8;
+    --accent: #d9480f;
+    --accent-soft: #fdeee5;
+    --ok: #2b8a3e;
+    --ok-soft: #e6f4ea;
+    --panel: #faf8f5;
+    --reward: #5f3dc4;
+    --reward-soft: #efeafc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161412; --card: #211e1b; --text: #f3efea; --sub: #a59d95;
+      --line: #36312c; --accent: #ff7a3d; --accent-soft: #3b2418; --ok: #51cf66; --ok-soft: #1c3322;
+      --panel: #1b1916; --reward: #b197fc; --reward-soft: #2a2340;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161412; --card: #211e1b; --text: #f3efea; --sub: #a59d95;
+    --line: #36312c; --accent: #ff7a3d; --accent-soft: #3b2418; --ok: #51cf66; --ok-soft: #1c3322;
+    --panel: #1b1916; --reward: #b197fc; --reward-soft: #2a2340;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 480px; margin: 0 auto; padding-block: 20px 48px; display: flex; flex-direction: column; gap: 14px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+  h1 { font-size: 20px; margin: 0; }
+  .date { color: var(--sub); font-size: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .card h2 { font-size: 13px; letter-spacing: .04em; margin: 0 0 10px; color: var(--sub); font-weight: 600; }
+
+  /* 連続日数 */
+  .streak { display: flex; align-items: center; gap: 16px; }
+  .streak-num { font-size: 48px; font-weight: 800; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+  .streak-label { font-size: 14px; color: var(--sub); }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 14px; }
+  .day { text-align: center; font-size: 11px; color: var(--sub); }
+  .dot {
+    width: 100%; max-width: 36px; aspect-ratio: 1; margin: 0 auto 4px;
+    border-radius: 50%; border: 2px solid var(--line);
+    display: grid; place-items: center; font-size: 14px; color: var(--card);
+  }
+  .dot.done { background: var(--accent); border-color: var(--accent); }
+  .dot.today { border-color: var(--accent); }
+  .day.future { opacity: .45; }
+
+  /* 今日のメニュー */
+  .theme { font-size: 18px; font-weight: 700; margin: 0 0 12px; }
+  .ex { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+  .ex.checked { border-color: var(--accent); }
+  .ex-row { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; }
+  .ex.checked .ex-row { background: var(--accent-soft); }
+  .check {
+    width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; padding: 0;
+    border: 2px solid var(--line); background: var(--card); color: var(--card);
+    display: grid; place-items: center; font-size: 15px;
+  }
+  .ex.checked .check { background: var(--accent); border-color: var(--accent); }
+  .ex-text { flex: 1; min-width: 0; }
+  .ex-name { font-weight: 600; display: block; }
+  .ex.checked .ex-name { text-decoration: line-through; color: var(--sub); }
+  .ex-amount { color: var(--sub); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .lv { font-size: 11px; color: var(--accent); font-weight: 700; margin-left: 6px; }
+  .howto-btn {
+    flex-shrink: 0; padding: 6px 10px; font-size: 13px; font-weight: 600;
+    background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
+  }
+  .howto { background: var(--panel); border-top: 1px solid var(--line); padding: 14px 14px 16px; font-size: 14px; }
+  .howto h3 { font-size: 13px; margin: 12px 0 4px; color: var(--sub); }
+  .howto h3:first-child { margin-top: 0; }
+  .howto ol, .howto ul { margin: 0; padding-left: 1.3em; }
+  .howto li { margin-bottom: 2px; }
+  .yt { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--accent); font-weight: 600; text-decoration: none; }
+  .yt:hover { text-decoration: underline; }
+
+  button { font: inherit; border: none; border-radius: 12px; cursor: pointer; }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* 終わったあとの評価 */
+  .finish-q { font-size: 14px; font-weight: 700; margin: 16px 0 8px; }
+  .finish { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .finish button { padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .finish strong { font-size: 16px; }
+  .finish span { font-size: 12px; opacity: .85; }
+  .btn-enough { background: var(--ok); color: #fff; }
+  .btn-more { background: var(--accent); color: #fff; }
+  .btn-min { display: block; margin: 12px auto 0; background: none; color: var(--sub); font-size: 13px; text-decoration: underline; padding: 4px; }
+  .result { background: var(--ok-soft); border-radius: 12px; padding: 14px; margin-top: 16px; }
+  .result-title { font-weight: 700; font-size: 16px; margin: 0 0 4px; }
+  .result p { margin: 0; font-size: 14px; }
+  .undo { display: block; margin: 10px auto 0; background: none; color: var(--sub); font-size: 13px; text-decoration: underline; }
+
+  /* 漫画予算 */
+  .wallet { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+  .wallet-num { font-size: 36px; font-weight: 800; color: var(--reward); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .wallet-sub { font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 999px; background: var(--reward-soft); margin: 12px 0 6px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--reward); border-radius: 999px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .rules { font-size: 13px; color: var(--sub); background: var(--panel); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+  .rules ul { margin: 0; padding-left: 1.2em; }
+  .buy-row { display: grid; grid-template-columns: 1fr 96px auto; gap: 8px; }
+  .buy-row input, .weight-row input {
+    min-width: 0; padding: 12px; font-size: 16px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text);
+  }
+  .btn-sub { padding: 12px 16px; background: var(--text); color: var(--bg); font-weight: 600; }
+  .msg { font-size: 13px; color: var(--accent); margin: 6px 0 0; min-height: 1em; }
+  .buys { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; }
+  .buys li { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .buys .t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .buys .d { color: var(--sub); font-size: 12px; }
+  .buys .a { font-variant-numeric: tabular-nums; }
+  .del { background: none; color: var(--sub); padding: 2px 6px; font-size: 16px; }
+
+  /* 体重 */
+  .weight-row { display: flex; gap: 8px; }
+  .weight-row input { flex: 1; }
+  .weight-stats { display: flex; justify-content: space-between; margin: 14px 0 6px; font-size: 14px; color: var(--sub); }
+  .weight-stats strong { color: var(--text); font-size: 18px; font-variant-numeric: tabular-nums; }
+  svg { width: 100%; height: 140px; display: block; }
+  .empty { color: var(--sub); font-size: 13px; text-align: center; padding: 20px 0; }
+
+  /* 達成時のお知らせ */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    background: var(--reward); color: #fff; padding: 12px 18px; border-radius: 999px;
+    font-weight: 700; font-size: 15px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,.2);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .toast { animation: pop .35s ease-out; }
+    @keyframes pop { from { transform: translate(-50%, 20px); opacity: 0; } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>毎日筋トレ</h1>
+    <span class="date" id="today-label"></span>
+  </header>
+
+  <section class="card">
+    <div class="streak">
+      <div class="streak-num" id="streak">0</div>
+      <div>
+        <div style="font-weight:700">日連続</div>
+        <div class="streak-label" id="streak-msg"></div>
+      </div>
+    </div>
+    <div class="week" id="week"></div>
+  </section>
+
+  <section class="card">
+    <h2>今日のメニュー</h2>
+    <p class="theme" id="theme"></p>
+    <div id="menu"></div>
+    <div id="finish-area"></div>
+  </section>
+
+  <section class="card">
+    <h2>漫画予算（今月）</h2>
+    <div id="wallet-area"></div>
+    <div class="rules">
+      <ul>
+        <li>負荷十分／負荷不足で完了：<b>+¥400</b></li>
+        <li>最低ラインだけの日：<b>+¥100</b></li>
+        <li>7日連続ごとにボーナス：<b>+¥1,000</b></li>
+        <li>1か月にもらえるのは<b>最大¥15,000</b>。残りは月末でリセット</li>
+      </ul>
+    </div>
+    <div class="buy-row">
+      <input id="buy-title" type="text" placeholder="買った漫画" aria-label="買った漫画のタイトル">
+      <input id="buy-amount" type="number" inputmode="numeric" placeholder="金額" aria-label="金額（円）">
+      <button class="btn-sub" id="buy-btn">使う</button>
+    </div>
+    <p class="msg" id="buy-msg"></p>
+    <ul class="buys" id="buys"></ul>
+  </section>
+
+  <section class="card">
+    <h2>体重</h2>
+    <div class="weight-row">
+      <input id="weight-input" type="number" inputmode="decimal" step="0.1" placeholder="例：58.0" aria-label="体重（kg）">
+      <button class="btn-sub" id="weight-btn">記録</button>
+    </div>
+    <div id="weight-area"></div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// 種目ごとの回数設定とやり方
+// base：最初の回数、step：「負荷不足」を選んだときに次回から増える量
+const EXERCISES = {
+  pushup: {
+    name: "腕立て伏せ（膝つき可）", base: 10, step: 2, unit: "回",
+    steps: [
+      "手は肩幅より少し広めに床につく",
+      "頭からかかとまで（膝つきなら膝まで）を一直線にする",
+      "2秒かけて、胸が床すれすれになるまで下ろす",
+      "床を押して1秒で戻る",
+    ],
+    points: ["肘は体から45度くらいに開く（真横に開かない）", "お腹とお尻に力を入れて、腰を反らさない"],
+    ng: ["腰が落ちる、またはお尻が上がる", "下ろす深さが浅い"],
+    easier: "10回できなければ膝つきで。それも難しければ机や壁に手をついてOK",
+    search: "腕立て伏せ 正しいフォーム 初心者",
+  },
+  plank: {
+    name: "プランク", base: 30, step: 10, unit: "秒",
+    steps: [
+      "うつ伏せになり、肘を肩の真下について前腕で体を支える",
+      "つま先を立てて体を持ち上げる",
+      "頭からかかとまで一直線のままキープする",
+    ],
+    points: ["おへそを背中側に引き込むイメージでお腹に力を入れる", "呼吸は止めずに続ける"],
+    ng: ["お尻が上がる、または腰が反って落ちる", "首を上げて前を見る（目線は床）"],
+    easier: "きつければ膝をついた状態でキープ",
+    search: "プランク 正しいやり方 初心者",
+  },
+  squat: {
+    name: "スクワット", base: 15, step: 3, unit: "回",
+    steps: [
+      "足を肩幅に開き、つま先を少し外に向ける",
+      "椅子に座るように、お尻を後ろに引きながら下がる",
+      "太ももが床と平行になるくらいまで下ろす",
+      "かかとで床を押して立ち上がる",
+    ],
+    points: ["膝とつま先を同じ方向に向ける", "背中は丸めず、胸を張ったまま"],
+    ng: ["膝が内側に入る", "かかとが浮く"],
+    easier: "椅子に座って立つ動きをくり返すだけでもOK",
+    search: "スクワット 正しいフォーム 初心者",
+  },
+  lunge: {
+    name: "ランジ", base: 10, step: 2, unit: "回", prefix: "左右",
+    steps: [
+      "足をそろえてまっすぐ立つ",
+      "片足を大きく1歩前に出す",
+      "両膝が90度になるまで真下に沈む",
+      "前足のかかとで床を押して元の位置に戻る。左右交互に",
+    ],
+    points: ["上半身はまっすぐ立てたまま", "前の膝がつま先より大きく前に出ないようにする"],
+    ng: ["前の膝が内側に入る", "上半身が前に倒れる"],
+    easier: "ふらつくなら壁や椅子に手をついて行う",
+    search: "ランジ 正しいやり方 初心者",
+  },
+  stretch: {
+    name: "ストレッチ", fixed: "5分",
+    steps: [
+      "太もも裏：脚を伸ばして座り、前に倒す（30秒）",
+      "胸：壁に手をついて体をひねる（左右30秒）",
+      "股関節：あぐらで座り、上半身を前に倒す（30秒）",
+      "肩：大きく前回し・後ろ回し（各10回）",
+    ],
+    points: ["反動をつけず、痛気持ちいいところで止める", "ゆっくり呼吸を続ける"],
+    ng: ["痛いところまで無理に伸ばす"],
+    easier: "全部やらなくてOK。1つだけでも完了にしてよい",
+    search: "寝る前 ストレッチ 5分 初心者",
+  },
+};
+
+// 曜日ごとのメニュー（0=日曜）。数字はセット数
+const MENUS = {
+  0: { theme: "休養日：ストレッチだけ", rest: true, items: [["stretch", 1]] },
+  1: { theme: "上半身の日", items: [["pushup", 3], ["plank", 3]] },
+  2: { theme: "下半身の日", items: [["squat", 3], ["lunge", 2]] },
+  3: { theme: "全身を軽めに", items: [["pushup", 2], ["squat", 2]] },
+  4: { theme: "上半身の日", items: [["pushup", 3], ["plank", 3]] },
+  5: { theme: "下半身の日", items: [["squat", 3], ["lunge", 2]] },
+  6: { theme: "全身を軽めに", items: [["pushup", 2], ["squat", 2]] },
+};
+
+// ご褒美のルール
+const REWARD = { full: 400, min: 100, streakBonus: 1000, streakEvery: 7, monthlyMax: 15000 };
+
+const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+const STORAGE_KEY = "workout-app-v1";
+
+// データの読み書き（保存できない環境でも動くようにtry/catchで包む）
+// done[日付] = "enough"（負荷十分）| "more"（負荷不足）| "min"（最低ライン）| "rest"（休養日）
+function load() {
+  const empty = { done: {}, checks: {}, weights: {}, levels: {}, bumped: {}, buys: [] };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = Object.assign(empty, JSON.parse(raw));
+      // 以前の版で記録したtrueは「負荷十分」として扱う
+      for (const k in d.done) if (d.done[k] === true) d.done[k] = "enough";
+      return d;
+    }
+  } catch (e) {}
+  return empty;
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+}
+
+// 端末のローカル時刻で「2026-11-23」形式の日付キーを作る
+function keyOf(d) {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+function addDays(d, n) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+const yen = n => "¥" + n.toLocaleString("ja-JP");
+
+let data = load();
+const now = new Date();
+const todayKey = keyOf(now);
+const monthPrefix = todayKey.slice(0, 7);
+const menu = MENUS[now.getDay()];
+const openHowto = new Set(); // やり方を開いている種目の番号
+
+// 今のレベルでの1セットの回数
+function reps(id) {
+  const ex = EXERCISES[id];
+  return ex.base + ex.step * (data.levels[id] || 0);
+}
+function amountText(id, sets) {
+  const ex = EXERCISES[id];
+  if (ex.fixed) return ex.fixed;
+  return `${ex.prefix || ""}${reps(id)}${ex.unit}×${sets}`;
+}
+
+// 指定日の時点での連続日数
+function streakAt(date) {
+  let d = date, count = 0;
+  while (data.done[keyOf(d)]) { count++; d = addDays(d, -1); }
+  return count;
+}
+// 表示用：今日が未完了なら昨日から数える（今日の途中で0に戻らないように）
+function calcStreak() {
+  return data.done[todayKey] ? streakAt(now) : streakAt(addDays(now, -1));
+}
+
+// その日にもらえる金額
+function earnedOn(date) {
+  const st = data.done[keyOf(date)];
+  if (!st) return 0;
+  let v = st === "min" ? REWARD.min : REWARD.full;
+  const s = streakAt(date);
+  if (s % REWARD.streakEvery === 0) v += REWARD.streakBonus;
+  return v;
+}
+// 今月の獲得額（上限つき）
+function monthEarned() {
+  let sum = 0;
+  for (let d = new Date(now.getFullYear(), now.getMonth(), 1); d <= now; d = addDays(d, 1)) sum += earnedOn(d);
+  return Math.min(sum, REWARD.monthlyMax);
+}
+function monthSpent() {
+  return data.buys.filter(b => b.date.startsWith(monthPrefix)).reduce((s, b) => s + b.amount, 0);
+}
+
+function toast(text) {
+  const t = document.getElementById("toast");
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { t.hidden = true; }, 3000);
+}
+
+function renderStreak() {
+  const s = calcStreak();
+  document.getElementById("streak").textContent = s;
+  let msg;
+  if (data.done[todayKey]) msg = "今日もおつかれさま！";
+  else if (s > 0) msg = "今日やれば記録が伸びます";
+  else msg = "今日から始めましょう";
+  const toBonus = REWARD.streakEvery - (s % REWARD.streakEvery);
+  if (!data.done[todayKey] && toBonus === 1) msg = "今日やると7日連続ボーナス！";
+  document.getElementById("streak-msg").textContent = msg;
+
+  const week = document.getElementById("week");
+  week.innerHTML = "";
+  // 今週（月曜始まり）の達成状況
+  const monday = addDays(now, -((now.getDay() + 6) % 7));
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(monday, i);
+    const k = keyOf(d);
+    const el = document.createElement("div");
+    el.className = "day" + (k > todayKey ? " future" : "");
+    el.innerHTML = `<div class="dot${data.done[k] ? " done" : ""}${k === todayKey ? " today" : ""}">${data.done[k] ? "✓" : ""}</div>${WEEKDAYS[d.getDay()]}`;
+    week.appendChild(el);
+  }
+}
+
+function howtoHtml(ex) {
+  const li = arr => arr.map(t => `<li>${esc(t)}</li>`).join("");
+  const url = "https://www.youtube.com/results?search_query=" + encodeURIComponent(ex.search);
+  return `
+    <h3>やり方</h3><ol>${li(ex.steps)}</ol>
+    <h3>ポイント</h3><ul>${li(ex.points)}</ul>
+    <h3>よくある間違い</h3><ul>${li(ex.ng)}</ul>
+    <h3>きついときは</h3><p style="margin:0">${esc(ex.easier)}</p>
+    <a class="yt" href="${url}" target="_blank" rel="noopener">▶ YouTubeで動画を見る</a>`;
+}
+
+function renderMenu() {
+  document.getElementById("theme").textContent = menu.theme;
+  const checks = data.checks[todayKey] || [];
+  const box = document.getElementById("menu");
+  box.innerHTML = "";
+  menu.items.forEach(([id, sets], i) => {
+    const ex = EXERCISES[id];
+    const lv = data.levels[id] || 0;
+    const wrap = document.createElement("div");
+    wrap.className = "ex" + (checks[i] ? " checked" : "");
+    wrap.innerHTML = `
+      <div class="ex-row">
+        <button class="check" aria-label="${esc(ex.name)}をやった">${checks[i] ? "✓" : ""}</button>
+        <div class="ex-text">
+          <span class="ex-name">${esc(ex.name)}</span>
+          <span class="ex-amount">${esc(amountText(id, sets))}</span>${lv ? `<span class="lv">Lv.${lv + 1}</span>` : ""}
+        </div>
+        <button class="howto-btn" aria-expanded="${openHowto.has(i)}">${openHowto.has(i) ? "閉じる" : "やり方"}</button>
+      </div>
+      <div class="howto"${openHowto.has(i) ? "" : " hidden"}>${howtoHtml(ex)}</div>`;
+
+    wrap.querySelector(".check").addEventListener("click", () => {
+      const c = data.checks[todayKey] || [];
+      c[i] = !c[i];
+      data.checks[todayKey] = c;
+      save();
+      renderMenu();
+    });
+    wrap.querySelector(".howto-btn").addEventListener("click", () => {
+      openHowto.has(i) ? openHowto.delete(i) : openHowto.add(i);
+      renderMenu();
+    });
+    box.appendChild(wrap);
+  });
+  renderFinish();
+}
+
+// 終わったあとの評価ボタン、または完了後の結果
+function renderFinish() {
+  const area = document.getElementById("finish-area");
+  const st = data.done[todayKey];
+  if (st) {
+    const titles = { enough: "負荷十分で完了！", more: "負荷不足で完了！", min: "最低ラインで完了！", rest: "休養日、完了！" };
+    let detail = "次回も同じ回数でいきましょう。";
+    if (st === "more") {
+      const ups = (data.bumped[todayKey] || []).map(id => `${EXERCISES[id].name.replace(/（.*）/, "")} ${reps(id)}${EXERCISES[id].unit}`);
+      detail = `次回から ${ups.join("、")} に増えます。`;
+    }
+    if (st === "min") detail = "疲れた日でも0にしなかったのがえらい。";
+    if (st === "rest") detail = "体を休めるのもトレーニングのうちです。";
+    area.innerHTML = `<div class="result">
+        <p class="result-title">${titles[st]} +${yen(earnedOn(now))}</p>
+        <p>${esc(detail)}</p>
+      </div>
+      <button class="undo" id="undo-btn">取り消す</button>`;
+    area.querySelector("#undo-btn").addEventListener("click", undo);
+    return;
+  }
+  if (menu.rest) {
+    area.innerHTML = `<p class="finish-q">ストレッチが終わったら</p>
+      <div class="finish" style="grid-template-columns:1fr"><button class="btn-enough" data-st="rest"><strong>完了</strong></button></div>`;
+  } else {
+    area.innerHTML = `<p class="finish-q">終わったら、負荷はどうでしたか？</p>
+      <div class="finish">
+        <button class="btn-enough" data-st="enough"><strong>負荷十分</strong><span>きつかった・ちょうどよい</span></button>
+        <button class="btn-more" data-st="more"><strong>負荷不足</strong><span>次回から回数を増やす</span></button>
+      </div>
+      <button class="btn-min" data-st="min">疲れた日：最低ライン（1回だけでも）やった</button>`;
+  }
+  area.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => finish(b.dataset.st)));
+}
+
+function finish(st) {
+  const before = monthEarned();
+  data.done[todayKey] = st;
+  if (st === "more") {
+    // 今日のメニューに含まれる種目のレベルを1つ上げる
+    const ids = [...new Set(menu.items.map(([id]) => id))].filter(id => !EXERCISES[id].fixed);
+    ids.forEach(id => { data.levels[id] = (data.levels[id] || 0) + 1; });
+    data.bumped[todayKey] = ids;
+  }
+  save();
+  render();
+  const got = monthEarned() - before;
+  const isBonus = streakAt(now) % REWARD.streakEvery === 0;
+  if (got > 0) toast(`${isBonus ? "7日連続ボーナス！ " : ""}漫画予算 +${yen(got)}`);
+  else toast("今月の漫画予算は上限に到達しています");
+}
+
+function undo() {
+  // 負荷不足で上げたレベルを元に戻す
+  (data.bumped[todayKey] || []).forEach(id => { data.levels[id] = Math.max(0, (data.levels[id] || 0) - 1); });
+  delete data.bumped[todayKey];
+  delete data.done[todayKey];
+  save();
+  render();
+}
+
+function renderWallet() {
+  const earned = monthEarned();
+  const spent = monthSpent();
+  const left = earned - spent;
+  const pct = Math.round((earned / REWARD.monthlyMax) * 100);
+  document.getElementById("wallet-area").innerHTML = `
+    <div class="wallet">
+      <div><div class="wallet-sub">使える残り</div><div class="wallet-num">${yen(left)}</div></div>
+      <div class="wallet-sub">獲得 ${yen(earned)} ／ 使用 ${yen(spent)}</div>
+    </div>
+    <div class="bar"><div style="width:${pct}%"></div></div>
+    <div class="bar-label"><span>今月の獲得</span><span>${yen(earned)} / ${yen(REWARD.monthlyMax)}</span></div>`;
+
+  const list = document.getElementById("buys");
+  const mine = data.buys.map((b, i) => [b, i]).filter(([b]) => b.date.startsWith(monthPrefix)).reverse();
+  list.innerHTML = "";
+  mine.forEach(([b, i]) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="t">${esc(b.title || "漫画")}<br><span class="d">${b.date.slice(5).replace("-", "/")}</span></span>
+      <span class="a">${yen(b.amount)}</span><button class="del" aria-label="この記録を消す">×</button>`;
+    li.querySelector(".del").addEventListener("click", () => { data.buys.splice(i, 1); save(); renderWallet(); });
+    list.appendChild(li);
+  });
+}
+
+function renderWeight() {
+  const area = document.getElementById("weight-area");
+  const entries = Object.entries(data.weights).sort(([a], [b]) => a.localeCompare(b)).slice(-30);
+  if (data.weights[todayKey]) document.getElementById("weight-input").placeholder = `今日：${data.weights[todayKey]}kg`;
+  if (entries.length === 0) {
+    area.innerHTML = `<div class="empty">体重を記録すると推移のグラフが出ます</div>`;
+    return;
+  }
+  const first = entries[0][1];
+  const last = entries[entries.length - 1][1];
+  const diff = (last - first).toFixed(1);
+  const sign = diff > 0 ? "+" : "";
+  area.innerHTML = `<div class="weight-stats">
+      <span>最新 <strong>${last.toFixed(1)}kg</strong></span>
+      <span>開始から <strong>${sign}${diff}kg</strong></span>
+    </div>`;
+  if (entries.length < 2) return;
+
+  // 折れ線グラフ（SVG）
+  const W = 300, H = 140, P = 16;
+  const vals = entries.map(([, v]) => v);
+  const min = Math.min(...vals) - 0.5, max = Math.max(...vals) + 0.5;
+  const x = i => P + (i * (W - P * 2)) / (entries.length - 1);
+  const y = v => H - P - ((v - min) * (H - P * 2)) / (max - min);
+  const pts = vals.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+  const dots = vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="var(--accent)"/>`).join("");
+  area.insertAdjacentHTML("beforeend",
+    `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="体重の推移">
+      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      ${dots}
+    </svg>`);
+}
+
+function render() {
+  renderStreak();
+  renderMenu();
+  renderWallet();
+  renderWeight();
+}
+
+document.getElementById("today-label").textContent =
+  `${now.getMonth() + 1}/${now.getDate()}（${WEEKDAYS[now.getDay()]}）`;
+
+document.getElementById("buy-btn").addEventListener("click", () => {
+  const titleEl = document.getElementById("buy-title");
+  const amountEl = document.getElementById("buy-amount");
+  const msg = document.getElementById("buy-msg");
+  const amount = parseInt(amountEl.value, 10);
+  const left = monthEarned() - monthSpent();
+  if (!(amount > 0)) { msg.textContent = "金額を入力してください"; return; }
+  if (amount > left) { msg.textContent = `残りが足りません（あと${yen(amount - left)}分、筋トレで貯めましょう）`; return; }
+  data.buys.push({ date: todayKey, title: titleEl.value.trim(), amount });
+  titleEl.value = "";
+  amountEl.value = "";
+  msg.textContent = "";
+  save();
+  renderWallet();
+  toast("いい買い物を！📚");
+});
+
+document.getElementById("weight-btn").addEventListener("click", () => {
+  const input = document.getElementById("weight-input");
+  const v = parseFloat(input.value);
+  if (!(v > 20 && v < 300)) return;
+  data.weights[todayKey] = Math.round(v * 10) / 10;
+  input.value = "";
+  save();
+  render();
+});
+
+render();
+</script>
+<script>
+// オフラインでも開けるようにする
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
