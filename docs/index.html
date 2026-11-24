@@ -191,14 +191,16 @@
   #goal-room { margin: 12px 0 0; }
 
   /* 下のタブ */
-  main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+  main { padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important; }
   .tabbar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
     display: grid; grid-template-columns: repeat(5, 1fr);
     background: var(--card); border-top: 1px solid var(--line);
     padding: 6px max(8px, env(safe-area-inset-left, 0px)) calc(6px + env(safe-area-inset-bottom, 0px));
   }
-  .tabbar button { background: none; color: var(--sub); font-size: 12px; font-weight: 600; padding: 10px 2px; border-radius: 10px; line-height: 1.3; }
+  .tabbar button { background: none; color: var(--sub); font-size: 11px; font-weight: 600; padding: 6px 2px; border-radius: 10px; line-height: 1.3;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .tabbar svg { width: 22px; height: 22px; }
   .tabbar button[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
 
   /* 体重 */
@@ -211,7 +213,7 @@
 
   /* 達成時のお知らせ */
   .toast {
-    position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 20; transform: translateX(-50%);
+    position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 20; transform: translateX(-50%);
     background: var(--reward); color: #fff; padding: 12px 18px; border-radius: 999px;
     font-weight: 700; font-size: 15px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,.2);
   }
@@ -308,11 +310,11 @@
   </div>
 </main>
 <nav class="tabbar" aria-label="画面の切り替え">
-  <button data-tab="habit">習慣</button>
-  <button data-tab="goal">今月の目標</button>
-  <button data-tab="workout">筋トレ/体重</button>
-  <button data-tab="money">お小遣い</button>
-  <button data-tab="settings">設定</button>
+  <button data-tab="habit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>習慣</button>
+  <button data-tab="goal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>今月の目標</button>
+  <button data-tab="workout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg>筋トレ/体重</button>
+  <button data-tab="money"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>お小遣い</button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>設定</button>
 </nav>
 <div class="toast" id="toast" hidden></div>
 
