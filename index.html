@@ -1,8 +1,8 @@
-<title>毎日筋トレ</title>
+<title>毎日の習慣</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
-  /* レイアウト：スマホ1列。上から「連続日数→今日のメニュー→漫画予算→体重」の順に親指で操作できる幅 */
+  /* レイアウト：スマホ1列。上から「連続日数→今日の習慣→筋トレメニュー→お小遣い→体重」の順に親指で操作できる幅 */
   :root {
     --bg: #f5f3ef;
     --card: #ffffff;
@@ -120,7 +120,7 @@
   .rules { font-size: 13px; color: var(--sub); background: var(--panel); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
   .rules ul { margin: 0; padding-left: 1.2em; }
   .buy-row { display: grid; grid-template-columns: 1fr 96px auto; gap: 8px; }
-  .buy-row input, .weight-row input {
+  .buy-row input, .buy-row2 input, .weight-row input {
     min-width: 0; padding: 12px; font-size: 16px;
     border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text);
   }
@@ -132,6 +132,32 @@
   .buys .d { color: var(--sub); font-size: 12px; }
   .buys .a { font-variant-numeric: tabular-nums; }
   .del { background: none; color: var(--sub); padding: 2px 6px; font-size: 16px; }
+
+  /* 習慣 */
+  .daytabs { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin-bottom: 12px; }
+  .daytabs button { background: none; color: var(--sub); padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 999px; }
+  .daytabs button[aria-pressed="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .habit { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; }
+  .habit.on { border-color: var(--reward); background: var(--reward-soft); }
+  .habit .check { pointer-events: none; }
+  .habit.on .check { background: var(--reward); border-color: var(--reward); }
+  .habit.auto { cursor: default; }
+  .habit-text { flex: 1; min-width: 0; }
+  .habit-name { font-weight: 600; display: block; }
+  .habit-sub { color: var(--sub); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .habit-yen { font-weight: 700; color: var(--reward); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .day-total { text-align: right; font-size: 13px; color: var(--sub); margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+  .buy-row select { min-width: 0; padding: 12px 8px; font-size: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text); }
+  .buy-row2 { display: grid; grid-template-columns: 1fr 96px auto; gap: 8px; margin-top: 8px; }
+  .buy-row2 input { min-width: 0; padding: 12px; font-size: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text); }
+  .cats { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cats button { padding: 8px 14px; font-size: 14px; background: var(--panel); color: var(--sub); border: 1px solid var(--line); border-radius: 999px; }
+  .cats button[aria-pressed="true"] { background: var(--reward); border-color: var(--reward); color: #fff; }
+  .by-cat { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--sub); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  details.settings { margin-top: 14px; font-size: 14px; }
+  details.settings summary { color: var(--sub); font-size: 13px; cursor: pointer; }
+  .set-grid { display: grid; grid-template-columns: 1fr 110px; gap: 8px 10px; align-items: center; margin-top: 10px; }
+  .set-grid input { min-width: 0; padding: 8px 10px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); text-align: right; }
 
   /* 体重 */
   .weight-row { display: flex; gap: 8px; }
@@ -155,7 +181,7 @@
 
 <main>
   <header>
-    <h1>毎日筋トレ</h1>
+    <h1>毎日の習慣</h1>
     <span class="date" id="today-label"></span>
   </header>
 
@@ -171,30 +197,37 @@
   </section>
 
   <section class="card">
-    <h2>今日のメニュー</h2>
+    <h2>習慣</h2>
+    <div class="daytabs" role="group" aria-label="記録する日">
+      <button id="tab-today" aria-pressed="true">今日</button>
+      <button id="tab-yday" aria-pressed="false">昨日</button>
+    </div>
+    <div id="habits"></div>
+  </section>
+
+  <section class="card">
+    <h2>今日の筋トレ</h2>
     <p class="theme" id="theme"></p>
     <div id="menu"></div>
     <div id="finish-area"></div>
   </section>
 
   <section class="card">
-    <h2>漫画予算（今月）</h2>
+    <h2>お小遣い（今月）</h2>
     <div id="wallet-area"></div>
-    <div class="rules">
-      <ul>
-        <li>負荷十分／負荷不足で完了：<b>+¥400</b></li>
-        <li>最低ラインだけの日：<b>+¥100</b></li>
-        <li>7日連続ごとにボーナス：<b>+¥1,000</b></li>
-        <li>1か月にもらえるのは<b>最大¥15,000</b>。残りは月末でリセット</li>
-      </ul>
-    </div>
-    <div class="buy-row">
-      <input id="buy-title" type="text" placeholder="買った漫画" aria-label="買った漫画のタイトル">
+    <div class="rules" id="rules"></div>
+    <div class="cats" id="cats" role="group" aria-label="何に使ったか"></div>
+    <div class="buy-row2">
+      <input id="buy-title" type="text" placeholder="メモ（例：同期と飲み）" aria-label="メモ">
       <input id="buy-amount" type="number" inputmode="numeric" placeholder="金額" aria-label="金額（円）">
       <button class="btn-sub" id="buy-btn">使う</button>
     </div>
     <p class="msg" id="buy-msg"></p>
     <ul class="buys" id="buys"></ul>
+    <details class="settings">
+      <summary>目標と金額を変える</summary>
+      <div class="set-grid" id="settings"></div>
+    </details>
   </section>
 
   <section class="card">
@@ -289,16 +322,34 @@ const MENUS = {
   6: { theme: "全身を軽めに", items: [["pushup", 2], ["squat", 2]] },
 };
 
-// ご褒美のルール
-const REWARD = { full: 400, min: 100, streakBonus: 1000, streakEvery: 7, monthlyMax: 15000 };
+// お小遣いのルール（初期値。画面の「目標と金額を変える」で変えられる）
+// 使えるお金は全額、習慣の達成で稼ぐ。残りは月末でリセット
+const DEFAULT_SETTINGS = {
+  full: 400,        // 筋トレ完了
+  min: 100,         // 筋トレ最低ライン
+  streakBonus: 1000, // 筋トレ7日連続ごと
+  wake: 300,        // 早起き
+  wakeTime: "06:30",
+  read: 300,        // 読書・勉強
+  readMin: 30,
+  nodrink: 200,     // お酒を飲まない日
+};
+const STREAK_EVERY = 7;
+// 手で付ける習慣（筋トレはメニューの完了で自動）
+const HABITS = [
+  { id: "wake", name: () => `${S().wakeTime}までに起きた`, sub: "早起き" },
+  { id: "read", name: () => `読書・勉強を${S().readMin}分した`, sub: "読書・勉強" },
+  { id: "nodrink", name: () => "お酒を飲まなかった", sub: "休肝日" },
+];
+const CATEGORIES = ["交際費", "買い物", "漫画"];
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
-const STORAGE_KEY = "workout-app-v1";
+const STORAGE_KEY = "workout-app-v1"; // 筋トレだけの頃からの記録をそのまま使う
 
 // データの読み書き（保存できない環境でも動くようにtry/catchで包む）
 // done[日付] = "enough"（負荷十分）| "more"（負荷不足）| "min"（最低ライン）| "rest"（休養日）
 function load() {
-  const empty = { done: {}, checks: {}, weights: {}, levels: {}, bumped: {}, buys: [] };
+  const empty = { done: {}, checks: {}, weights: {}, levels: {}, bumped: {}, buys: [], habits: {}, settings: {} };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -331,11 +382,14 @@ function esc(s) {
 const yen = n => "¥" + n.toLocaleString("ja-JP");
 
 let data = load();
+const S = () => Object.assign({}, DEFAULT_SETTINGS, data.settings);
 const now = new Date();
 const todayKey = keyOf(now);
 const monthPrefix = todayKey.slice(0, 7);
 const menu = MENUS[now.getDay()];
 const openHowto = new Set(); // やり方を開いている種目の番号
+let habitDay = now;          // 習慣を記録する日（今日／昨日）
+let buyCat = CATEGORIES[0];
 
 // 今のレベルでの1セットの回数
 function reps(id) {
@@ -359,20 +413,28 @@ function calcStreak() {
   return data.done[todayKey] ? streakAt(now) : streakAt(addDays(now, -1));
 }
 
-// その日にもらえる金額
-function earnedOn(date) {
+// その日の筋トレでもらえる金額
+function workoutEarnedOn(date) {
   const st = data.done[keyOf(date)];
   if (!st) return 0;
-  let v = st === "min" ? REWARD.min : REWARD.full;
-  const s = streakAt(date);
-  if (s % REWARD.streakEvery === 0) v += REWARD.streakBonus;
+  const r = S();
+  let v = st === "min" ? r.min : r.full;
+  if (streakAt(date) % STREAK_EVERY === 0) v += r.streakBonus;
   return v;
 }
-// 今月の獲得額（上限つき）
+// その日の筋トレ以外の習慣でもらえる金額
+function habitsEarnedOn(date) {
+  const h = data.habits[keyOf(date)] || {};
+  return HABITS.reduce((sum, x) => sum + (h[x.id] ? S()[x.id] : 0), 0);
+}
+function earnedOn(date) {
+  return workoutEarnedOn(date) + habitsEarnedOn(date);
+}
+// 今月の獲得額
 function monthEarned() {
   let sum = 0;
   for (let d = new Date(now.getFullYear(), now.getMonth(), 1); d <= now; d = addDays(d, 1)) sum += earnedOn(d);
-  return Math.min(sum, REWARD.monthlyMax);
+  return sum;
 }
 function monthSpent() {
   return data.buys.filter(b => b.date.startsWith(monthPrefix)).reduce((s, b) => s + b.amount, 0);
@@ -393,7 +455,7 @@ function renderStreak() {
   if (data.done[todayKey]) msg = "今日もおつかれさま！";
   else if (s > 0) msg = "今日やれば記録が伸びます";
   else msg = "今日から始めましょう";
-  const toBonus = REWARD.streakEvery - (s % REWARD.streakEvery);
+  const toBonus = STREAK_EVERY - (s % STREAK_EVERY);
   if (!data.done[todayKey] && toBonus === 1) msg = "今日やると7日連続ボーナス！";
   document.getElementById("streak-msg").textContent = msg;
 
@@ -473,7 +535,7 @@ function renderFinish() {
     if (st === "min") detail = "疲れた日でも0にしなかったのがえらい。";
     if (st === "rest") detail = "体を休めるのもトレーニングのうちです。";
     area.innerHTML = `<div class="result">
-        <p class="result-title">${titles[st]} +${yen(earnedOn(now))}</p>
+        <p class="result-title">${titles[st]} +${yen(workoutEarnedOn(now))}</p>
         <p>${esc(detail)}</p>
       </div>
       <button class="undo" id="undo-btn">取り消す</button>`;
@@ -506,9 +568,8 @@ function finish(st) {
   save();
   render();
   const got = monthEarned() - before;
-  const isBonus = streakAt(now) % REWARD.streakEvery === 0;
-  if (got > 0) toast(`${isBonus ? "7日連続ボーナス！ " : ""}漫画予算 +${yen(got)}`);
-  else toast("今月の漫画予算は上限に到達しています");
+  const isBonus = streakAt(now) % STREAK_EVERY === 0;
+  toast(`${isBonus ? "7日連続ボーナス！ " : ""}お小遣い +${yen(got)}`);
 }
 
 function undo() {
@@ -520,28 +581,113 @@ function undo() {
   render();
 }
 
+function renderHabits() {
+  const k = keyOf(habitDay);
+  const isToday = k === todayKey;
+  document.getElementById("tab-today").setAttribute("aria-pressed", isToday);
+  document.getElementById("tab-yday").setAttribute("aria-pressed", !isToday);
+  const h = data.habits[k] || {};
+  const r = S();
+  const box = document.getElementById("habits");
+  // 今週（月曜始まり）に何日できたか
+  const monday = addDays(now, -((now.getDay() + 6) % 7));
+  const weekCount = id => {
+    let n = 0;
+    for (let d = monday; keyOf(d) <= todayKey; d = addDays(d, 1)) {
+      if (id === "workout" ? data.done[keyOf(d)] : (data.habits[keyOf(d)] || {})[id]) n++;
+    }
+    return n;
+  };
+  const st = data.done[k];
+  const workoutRow = `<div class="habit auto${st ? " on" : ""}">
+      <span class="check">${st ? "✓" : ""}</span>
+      <span class="habit-text"><span class="habit-name">筋トレ</span>
+        <span class="habit-sub">${isToday ? "下のメニューを終えると付きます" : (st ? "完了" : "やっていない")} ・ 今週 ${weekCount("workout")}日</span></span>
+      <span class="habit-yen">${st ? "+" + yen(workoutEarnedOn(habitDay)) : yen(r.full)}</span>
+    </div>`;
+  box.innerHTML = HABITS.map(x => `
+    <button class="habit${h[x.id] ? " on" : ""}" data-id="${x.id}" aria-pressed="${!!h[x.id]}">
+      <span class="check">${h[x.id] ? "✓" : ""}</span>
+      <span class="habit-text"><span class="habit-name">${esc(x.name())}</span>
+        <span class="habit-sub">${x.sub} ・ 今週 ${weekCount(x.id)}日</span></span>
+      <span class="habit-yen">${h[x.id] ? "+" : ""}${yen(r[x.id])}</span>
+    </button>`).join("") + workoutRow +
+    `<p class="day-total">${isToday ? "今日" : "昨日"}の獲得 <b>${yen(earnedOn(habitDay))}</b></p>`;
+  box.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.id;
+    const cur = data.habits[k] || {};
+    cur[id] = !cur[id];
+    data.habits[k] = cur;
+    save();
+    render();
+    if (cur[id]) toast(`お小遣い +${yen(S()[id])}`);
+  }));
+}
+
 function renderWallet() {
   const earned = monthEarned();
   const spent = monthSpent();
   const left = earned - spent;
-  const pct = Math.round((earned / REWARD.monthlyMax) * 100);
+  const pct = earned > 0 ? Math.min(100, Math.round((left / earned) * 100)) : 0;
+  const mineAll = data.buys.filter(b => b.date.startsWith(monthPrefix));
+  const byCat = CATEGORIES.map(c => [c, mineAll.filter(b => (b.cat || "漫画") === c).reduce((s, b) => s + b.amount, 0)]).filter(([, v]) => v > 0);
   document.getElementById("wallet-area").innerHTML = `
     <div class="wallet">
       <div><div class="wallet-sub">使える残り</div><div class="wallet-num">${yen(left)}</div></div>
-      <div class="wallet-sub">獲得 ${yen(earned)} ／ 使用 ${yen(spent)}</div>
+      <div class="wallet-sub">稼いだ ${yen(earned)} ／ 使った ${yen(spent)}</div>
     </div>
     <div class="bar"><div style="width:${pct}%"></div></div>
-    <div class="bar-label"><span>今月の獲得</span><span>${yen(earned)} / ${yen(REWARD.monthlyMax)}</span></div>`;
+    ${byCat.length ? `<div class="by-cat">${byCat.map(([c, v]) => `<span>${c} ${yen(v)}</span>`).join("")}</div>` : ""}`;
+
+  const r = S();
+  document.getElementById("rules").innerHTML = `<ul>
+      <li>早起き <b>+${yen(r.wake)}</b> ／ 読書・勉強 <b>+${yen(r.read)}</b> ／ 休肝日 <b>+${yen(r.nodrink)}</b></li>
+      <li>筋トレ完了 <b>+${yen(r.full)}</b>（最低ラインは+${yen(r.min)}）、7日連続ごとに <b>+${yen(r.streakBonus)}</b></li>
+      <li>交際費・買い物は、稼いだ分の中でだけ使える。残りは月末でリセット</li>
+    </ul>`;
+
+  document.getElementById("cats").innerHTML = CATEGORIES.map(c =>
+    `<button data-cat="${c}" aria-pressed="${c === buyCat}">${c}</button>`).join("");
+  document.querySelectorAll("#cats [data-cat]").forEach(b => b.addEventListener("click", () => { buyCat = b.dataset.cat; renderWallet(); }));
 
   const list = document.getElementById("buys");
   const mine = data.buys.map((b, i) => [b, i]).filter(([b]) => b.date.startsWith(monthPrefix)).reverse();
   list.innerHTML = "";
   mine.forEach(([b, i]) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="t">${esc(b.title || "漫画")}<br><span class="d">${b.date.slice(5).replace("-", "/")}</span></span>
+    const cat = b.cat || "漫画";
+    li.innerHTML = `<span class="t">${esc(b.title || cat)}<br><span class="d">${b.date.slice(5).replace("-", "/")} ・ ${esc(cat)}</span></span>
       <span class="a">${yen(b.amount)}</span><button class="del" aria-label="この記録を消す">×</button>`;
     li.querySelector(".del").addEventListener("click", () => { data.buys.splice(i, 1); save(); renderWallet(); });
     list.appendChild(li);
+  });
+}
+
+// 目標と金額の設定
+const SETTING_FIELDS = [
+  ["wakeTime", "早起きの時刻", "time"],
+  ["wake", "早起き（円）", "number"],
+  ["readMin", "読書・勉強（分）", "number"],
+  ["read", "読書・勉強（円）", "number"],
+  ["nodrink", "休肝日（円）", "number"],
+  ["full", "筋トレ完了（円）", "number"],
+  ["min", "筋トレ最低ライン（円）", "number"],
+  ["streakBonus", "筋トレ7日連続（円）", "number"],
+];
+function renderSettings() {
+  const r = S();
+  const box = document.getElementById("settings");
+  box.innerHTML = SETTING_FIELDS.map(([id, label, type]) =>
+    `<label for="set-${id}">${label}</label><input id="set-${id}" type="${type}" ${type === "number" ? 'inputmode="numeric" min="0"' : ""} value="${esc(r[id])}">`).join("");
+  SETTING_FIELDS.forEach(([id, , type]) => {
+    document.getElementById("set-" + id).addEventListener("change", e => {
+      const v = type === "number" ? parseInt(e.target.value, 10) : e.target.value;
+      if (type === "number" && !(v >= 0)) return;
+      if (type === "time" && !v) return;
+      data.settings[id] = v;
+      save();
+      render();
+    });
   });
 }
 
@@ -580,6 +726,7 @@ function renderWeight() {
 
 function render() {
   renderStreak();
+  renderHabits();
   renderMenu();
   renderWallet();
   renderWeight();
@@ -595,14 +742,14 @@ document.getElementById("buy-btn").addEventListener("click", () => {
   const amount = parseInt(amountEl.value, 10);
   const left = monthEarned() - monthSpent();
   if (!(amount > 0)) { msg.textContent = "金額を入力してください"; return; }
-  if (amount > left) { msg.textContent = `残りが足りません（あと${yen(amount - left)}分、筋トレで貯めましょう）`; return; }
-  data.buys.push({ date: todayKey, title: titleEl.value.trim(), amount });
+  if (amount > left) { msg.textContent = `残りが足りません（あと${yen(amount - left)}分、習慣で稼ぎましょう）`; return; }
+  data.buys.push({ date: todayKey, cat: buyCat, title: titleEl.value.trim(), amount });
   titleEl.value = "";
   amountEl.value = "";
   msg.textContent = "";
   save();
   renderWallet();
-  toast("いい買い物を！📚");
+  toast(buyCat === "交際費" ? "楽しんで！🍻" : "いい買い物を！");
 });
 
 document.getElementById("weight-btn").addEventListener("click", () => {
@@ -615,5 +762,9 @@ document.getElementById("weight-btn").addEventListener("click", () => {
   render();
 });
 
+document.getElementById("tab-today").addEventListener("click", () => { habitDay = now; renderHabits(); });
+document.getElementById("tab-yday").addEventListener("click", () => { habitDay = addDays(now, -1); renderHabits(); });
+
+renderSettings();
 render();
 </script>

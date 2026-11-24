@@ -23,7 +23,7 @@ html = f"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#d9480f">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="毎日筋トレ">
+<meta name="apple-mobile-web-app-title" content="毎日の習慣">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
@@ -46,8 +46,8 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 
 # ---- manifest：ホーム画面に追加したときの名前・アイコン ----
 (SITE / "manifest.webmanifest").write_text("""{
-  "name": "毎日筋トレ",
-  "short_name": "筋トレ",
+  "name": "毎日の習慣",
+  "short_name": "習慣",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

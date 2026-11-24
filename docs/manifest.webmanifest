@@ -1,6 +1,6 @@
 {
-  "name": "毎日筋トレ",
-  "short_name": "筋トレ",
+  "name": "毎日の習慣",
+  "short_name": "習慣",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
