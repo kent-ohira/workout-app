@@ -172,6 +172,10 @@
   .goal .a { font-weight: 700; color: var(--reward); font-variant-numeric: tabular-nums; font-size: 14px; }
   .section-gap { margin-top: 20px; }
 
+  .task-lock { width: 100%; margin-top: 10px; padding: 12px; background: var(--reward); color: #fff; font-weight: 700; }
+  .task-sum { font-size: 13px; color: var(--sub); margin: 8px 0 0; font-variant-numeric: tabular-nums; }
+  .task-sum b { color: var(--reward); }
+
   .panel { display: flex; flex-direction: column; gap: 14px; }
   .note { font-size: 12px; color: var(--sub); margin: 0 0 10px; }
   #goal-room { margin: 12px 0 0; }
@@ -227,6 +231,10 @@
         <button id="tab-yday" aria-pressed="false">昨日</button>
       </div>
       <div id="habits"></div>
+    </section>
+    <section class="card">
+      <h2>今日のタスク</h2>
+      <div id="tasks"></div>
     </section>
   </div>
 
@@ -395,6 +403,7 @@ const DEFAULT_SETTINGS = {
   bed: 300,         // 早寝
   bedTime: "24:30",
   nodrink: 200,     // お酒を飲まない日
+  tasks: 3000,      // 朝に決めたタスクをすべて完了
   monthlyCap: 100000, // 1か月に稼げる上限（習慣で稼げる最大＋目標の合計がこれを超えないようにする）
 };
 const STREAK_EVERY = 7;
@@ -412,7 +421,7 @@ const STORAGE_KEY = "workout-app-v1"; // 筋トレだけの頃からの記録を
 // データの読み書き（保存できない環境でも動くようにtry/catchで包む）
 // done[日付] = "enough"（負荷十分）| "more"（負荷不足）| "min"（最低ライン）| "rest"（休養日）
 function load() {
-  const empty = { done: {}, checks: {}, weights: {}, levels: {}, bumped: {}, buys: [], habits: {}, settings: {}, books: [], goals: [] };
+  const empty = { done: {}, checks: {}, weights: {}, levels: {}, bumped: {}, buys: [], habits: {}, settings: {}, books: [], goals: [], tasks: {} };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -490,11 +499,17 @@ function habitsEarnedOn(date) {
   const h = data.habits[keyOf(date)] || {};
   return HABITS.reduce((sum, x) => sum + (h[x.id] ? S()[x.id] : 0), 0);
 }
-// その日の獲得（習慣＋達成した目標）
+// 朝に決めたタスク。data.tasks[日付] = { locked: 決定済みか, items: [{ t: 内容, done: 済みか }] }
+// 決定したあとに全部終えたら S().tasks 円
+function tasksAllDone(k) {
+  const d = data.tasks[k];
+  return !!(d && d.locked && d.items.length && d.items.every(x => x.done));
+}
+// その日の獲得（習慣＋朝のタスク＋達成した目標）
 function earnedOn(date) {
   const k = keyOf(date);
   const goals = data.goals.filter(g => g.done === k).reduce((s, g) => s + g.amount, 0);
-  return workoutEarnedOn(date) + habitsEarnedOn(date) + goals;
+  return workoutEarnedOn(date) + habitsEarnedOn(date) + (tasksAllDone(k) ? S().tasks : 0) + goals;
 }
 // その月に習慣だけで稼げる最大（毎日すべて達成した場合）
 function habitMax(ym) {
@@ -516,7 +531,7 @@ function spentInMonth(ym) {
 }
 // 前の月から持ち越した赤字（0以下）。黒字は持ち越さない
 function carryInto(ym) {
-  const keys = [...Object.keys(data.done), ...Object.keys(data.habits), ...data.buys.map(b => b.date)];
+  const keys = [...Object.keys(data.done), ...Object.keys(data.habits), ...Object.keys(data.tasks), ...data.buys.map(b => b.date)];
   const first = keys.length ? keys.sort()[0].slice(0, 7) : ym;
   let carry = 0;
   let [y, m] = first.split("-").map(Number);
@@ -724,6 +739,52 @@ function renderHabits() {
   }));
 }
 
+function renderTasks() {
+  const box = document.getElementById("tasks");
+  const d = data.tasks[todayKey] || { locked: false, items: [] };
+  const reward = yen(S().tasks);
+  const rows = d.items.map((x, i) => `<div class="goal${x.done ? " on" : ""}">
+      ${d.locked ? `<button class="check" data-i="${i}" aria-pressed="${!!x.done}" aria-label="${esc(x.t)}を終えた">${x.done ? "✓" : ""}</button>` : ""}
+      <span class="t">${esc(x.t)}</span>
+      ${d.locked ? "" : `<button class="del" data-del="${i}" aria-label="このタスクを消す">×</button>`}
+    </div>`).join("");
+  if (!d.locked) {
+    box.innerHTML = `<div class="add-row">
+        <input id="task-input" type="text" placeholder="今日やること" aria-label="今日やること">
+        <button class="btn-sub" id="task-add">追加</button>
+      </div>${rows}
+      ${d.items.length ? `<button class="task-lock" id="task-lock">これで決定（全部終えたら ${reward}）</button>` : ""}`;
+    const input = box.querySelector("#task-input");
+    const add = () => {
+      const t = input.value.trim();
+      if (!t) return;
+      d.items.push({ t, done: false });
+      data.tasks[todayKey] = d;
+      save(); renderTasks();
+      document.getElementById("task-input").focus();
+    };
+    box.querySelector("#task-add").addEventListener("click", add);
+    input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) add(); });
+    box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+      d.items.splice(+b.dataset.del, 1); save(); renderTasks();
+    }));
+    const lock = box.querySelector("#task-lock");
+    if (lock) lock.addEventListener("click", () => {
+      if (!confirm("決定するとタスクの追加・削除はできなくなります。決定しますか？")) return;
+      d.locked = true; save(); render();
+    });
+    return;
+  }
+  const n = d.items.filter(x => x.done).length;
+  box.innerHTML = rows + `<p class="task-sum">${n === d.items.length ? `全部完了！ <b>+${reward}</b>` : `${n}/${d.items.length} 完了 ・ 全部終えたら <b>${reward}</b>`}</p>`;
+  box.querySelectorAll("[data-i]").forEach(b => b.addEventListener("click", () => {
+    const x = d.items[+b.dataset.i];
+    x.done = !x.done;
+    save(); render();
+    if (tasksAllDone(todayKey)) toast(`タスク全部完了！ お小遣い +${reward}`);
+  }));
+}
+
 function renderWallet() {
   const earned = monthEarned();
   const spent = monthSpent();
@@ -791,6 +852,7 @@ const SETTING_FIELDS = [
   ["bed", "早寝（円）", "number"],
   ["monthlyCap", "1か月の上限（円）", "number"],
   ["nodrink", "休肝日（円）", "number"],
+  ["tasks", "朝のタスク全部完了（円）", "number"],
   ["full", "筋トレ完了（円）", "number"],
   ["min", "筋トレ最低ライン（円）", "number"],
   ["streakBonus", "筋トレ7日連続（円）", "number"],
@@ -854,6 +916,7 @@ function render() {
   renderStreak();
   renderWeek();
   renderHabits();
+  renderTasks();
   renderGoals();
   renderMaxNote();
   renderMenu();
